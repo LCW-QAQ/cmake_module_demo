@@ -1,0 +1,16 @@
+@PACKAGE_INIT@
+
+# 远古CMake用法，设置相关变量，需要使用这自行link、include
+# set( @PROJECT_NAME@_LIBRARIES  your_library_name)
+# set( @PROJECT_NAME@_INCLUDE_DIRS  @PACKAGE_INCLUDE_DIRS@)
+# set( @PROJECT_NAME@_LIBRARY_DIRS @PACKAGE_LIB_DIR@)
+
+# 需要使用find_dependency命令时引入
+include(CMakeFindDependencyMacro)
+# 工程CMakeLists文件中可以动态设置该值，最终会被替换到当前文件中，通常用来实现查找依赖的CMake模块。
+@CMAKE_CONFIG_DEPS@
+# 新版CMake用法，导入生成的对象文件，对象文件中会自动导入头文件、链接相关库。
+include("${CMAKE_CURRENT_LIST_DIR}/${PROJECT_NAME}Targets.cmake")
+
+# 依赖的组件
+check_required_components(${PROJECT_NAME})
