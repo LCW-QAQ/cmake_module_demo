@@ -1,16 +1,21 @@
 aux_source_directory(. SRC_FILES)
 
 add_library(${PROJECT_NAME} ${SRC_FILES})
+# add_library(${PROJECT_NAME}::Core ALIAS ${PROJECT_NAME}_Core)
 
 # 使用这种方式会导致安装${PROJECT_NAME}Targets.cmake对象文件时错误
 # target_include_directories(${PROJECT_NAME} PUBLIC
 #   ${PROJECT_SOURCE_DIR}/include
 # )
+
+message(STATUS "INSTALL_PREFIX: ${INSTALL_PREFIX}")
+
 target_include_directories(${PROJECT_NAME} PUBLIC
   # 在构建时引入的头文件目录
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   # 安装时引入的头文件目录
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>
+#   $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 
