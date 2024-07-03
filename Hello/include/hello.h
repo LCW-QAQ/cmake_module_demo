@@ -1,3 +1,3 @@
 #include <bits/stdc++.h>
 
-void sub_hello();
+void say_hello();

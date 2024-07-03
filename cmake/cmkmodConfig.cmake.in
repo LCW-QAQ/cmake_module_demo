@@ -1,16 +1,67 @@
 @PACKAGE_INIT@
 
-# 远古CMake用法，设置相关变量，需要使用这自行link、include
-# set( @PROJECT_NAME@_LIBRARIES  your_library_name)
-# set( @PROJECT_NAME@_INCLUDE_DIRS  @PACKAGE_INCLUDE_DIRS@)
-# set( @PROJECT_NAME@_LIBRARY_DIRS @PACKAGE_LIB_DIR@)
+if (NOT cmkmod_FIND_COMPONENTS)
+    set(cmkmod_NOT_FOUND_MESSAGE "The cmkmod package requires at least one component")
+    set(cmkmod_FOUND False)
+    return()
+endif()
 
 # 需要使用find_dependency命令时引入
 include(CMakeFindDependencyMacro)
 # 工程CMakeLists文件中可以动态设置该值，最终会被替换到当前文件中，通常用来实现查找依赖的CMake模块。
 @cmkmod_CMAKE_CONFIG_DEPS@
-# 新版CMake用法，导入生成的对象文件，对象文件中会自动导入头文件、链接相关库。
-include("${CMAKE_CURRENT_LIST_DIR}/cmkmodTargets.cmake")
 
-# 依赖的组件
-check_required_components(cmkmod)
+message(DEBUG "cmkmod_FIND_COMPONENTS: ${cmkmod_FIND_COMPONENTS}")
+message(DEBUG "cmkmod_FIND_REQUIRED: ${cmkmod_FIND_REQUIRED}")
+
+get_filename_component(_cmkmod_install_prefix "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
+
+message(DEBUG "_cmkmod_install_prefix: ${_cmkmod_install_prefix}")
+
+# 临时覆盖CMAKE_PREFIX_PATH，以便让子组件能找到彼此。
+# 子组件都在当前${CMAKE_CURRENT_LIST_DIR}下，不要再去默认路径和其他运行时路径寻找
+set(cmkmod_CMAKE_PREFIX_PATH_old ${CMAKE_PREFIX_PATH})
+set(CMAKE_PREFIX_PATH ${_cmkmod_install_prefix})
+
+# 任意组件未找到时的错误信息
+set(_cmkmod_NOTFOUND_MESSAGE)
+
+set(_cmkmod_FIND_PARTS_REQUIRED)
+if (cmkmod_FIND_REQUIRED)
+    set(_cmkmod_FIND_PARTS_REQUIRED REQUIRED)
+endif()
+set(_cmkmod_FIND_PARTS_QUIET)
+if (cmkmod_FIND_QUIETLY)
+    set(_cmkmod_FIND_PARTS_QUIET QUIET)
+endif()
+
+message(DEBUG "cmkmod_FIND_QUIET: ${cmkmod_FIND_QUIET}")
+message(DEBUG "cmkmod_FIND_REQUIRED: ${cmkmod_FIND_REQUIRED}")
+message(DEBUG "_cmkmod_FIND_PARTS_QUIET: ${_cmkmod_FIND_PARTS_QUIET}")
+message(DEBUG "_cmkmod_FIND_PARTS_REQUIRED: ${_cmkmod_FIND_PARTS_REQUIRED}")
+
+foreach(module ${cmkmod_FIND_COMPONENTS})
+    find_package(cmkmod${module}
+        ${_cmkmod_FIND_PARTS_QUIET}
+        ${_cmkmod_FIND_PARTS_REQUIRED}
+        PATHS "${_cmkmod_install_prefix}" NO_DEFAULT_PATH
+    )
+    if (NOT cmkmod${module}_FOUND)
+        if (cmkmod_FIND_REQUIRED_${module})
+            set(_cmkmod_NOTFOUND_MESSAGE "${_cmkmod_NOTFOUND_MESSAGE}Failed to find cmkmod component \"${module}\" config file at \"${_cmkmod_install_prefix}/cmkmod${module}/cmkmod${module}Config.cmake\"\n")
+        elseif(NOT cmkmod_FIND_QUIETLY)
+            message(WARNING "Failed to find cmkmod component \"${module}\" config file at \"${_cmkmod_install_prefix}/cmkmod${module}/cmkmod${module}Config.cmake\"")
+        endif()
+    endif()
+
+    # For backward compatibility set the LIBRARIES variable
+    list(APPEND cmkmod_LIBRARIES "cmkmod::${module}")
+endforeach()
+
+# 组件查找结束后还原CMAKE_PREFIX_PATH
+set(CMAKE_PREFIX_PATH ${cmkmod_CMAKE_PREFIX_PATH_old})
+
+if (_cmkmod_NOTFOUND_MESSAGE)
+    set(cmkmod_NOT_FOUND_MESSAGE "${_cmkmod_NOTFOUND_MESSAGE}")
+    set(cmkmod_FOUND False)
+endif()
